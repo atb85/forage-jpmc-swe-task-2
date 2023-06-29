@@ -2,12 +2,14 @@ import React, { Component } from 'react';
 import DataStreamer, { ServerRespond } from './DataStreamer';
 import Graph from './Graph';
 import './App.css';
+import { PassThrough } from 'stream';
 
 /**
  * State declaration for <App />
  */
 interface IState {
   data: ServerRespond[],
+  showGraph: Boolean,
 }
 
 /**
@@ -20,8 +22,9 @@ class App extends Component<{}, IState> {
 
     this.state = {
       // data saves the server responds.
-      // We use this state to parse data down to the child element (Graph) as element property
+      // showGraph tests whether a graph should be rendered (only on button press)
       data: [],
+      showGraph: false,
     };
   }
 
@@ -36,11 +39,24 @@ class App extends Component<{}, IState> {
    * Get new data from server and update the state with the new data
    */
   getDataFromServer() {
-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
-      // Update the state by creating a new array of data that consists of
-      // Previous data in the state and the new data from server
-      this.setState({ data: [...this.state.data, ...serverResponds] });
-    });
+
+    let streamCounter: number = 0;
+
+    const streamInterval = setInterval(() => {
+      DataStreamer.getData((serverResponds: ServerRespond[]) => {
+        // Update the state by creating a new array of data that consists of
+        // Previous data in the state and the new data from server
+        this.setState({ 
+          data: [...this.state.data, ...serverResponds],
+          showGraph: true
+        });
+      });
+      streamCounter++;
+      if (streamCounter > 1000) clearInterval(streamInterval);
+
+    }, 100);
+
+    
   }
 
   /**
@@ -62,8 +78,10 @@ class App extends Component<{}, IState> {
             onClick={() => {this.getDataFromServer()}}>
             Start Streaming Data
           </button>
-          <div className="Graph">
-            {this.renderGraph()}
+          <div className="Graph"
+          //conditionally render the graph
+          >
+            {this.state.showGraph && this.renderGraph()}
           </div>
         </div>
       </div>
